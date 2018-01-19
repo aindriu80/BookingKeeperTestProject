@@ -16,6 +16,7 @@ namespace TestNinja.UnitTests.Mocking
         private Mock<IXtraMessageBox> _messageBox;
         private DateTime _statementDate = new DateTime(2017, 1, 1);
         private Housekeeper _housekeeper;
+        private readonly string _statementFileName = "filename";
 
         [SetUp]
         public void Setup()
@@ -38,6 +39,7 @@ namespace TestNinja.UnitTests.Mocking
                 _emailSender.Object,
                 _messageBox.Object);
         }
+        
         [Test]
         public void SendStatementEmails_WhenCalled_GenerateStatements()
         {
@@ -59,6 +61,7 @@ namespace TestNinja.UnitTests.Mocking
                 sg.SaveStatement(_housekeeper.Oid, _housekeeper.FullName, (_statementDate)),
                 Times.Never);
         }
+        
         [Test]
         public void SendStatementEmails_HouseKeepersEmailWhitespace_ShouldNotGenerateStatement()
         {
@@ -70,6 +73,7 @@ namespace TestNinja.UnitTests.Mocking
                 sg.SaveStatement(_housekeeper.Oid, _housekeeper.FullName, (_statementDate)),
                 Times.Never);
         }
+        
         [Test]
         public void SendStatementEmails_HouseKeepersEmailIsEmpty_ShouldNotGenerateStatement()
         {
@@ -81,6 +85,78 @@ namespace TestNinja.UnitTests.Mocking
                 sg.SaveStatement(_housekeeper.Oid, _housekeeper.FullName, (_statementDate)),
                 Times.Never);
         }
+        
+        [Test]
+        public void SendStatementEmails_WhenCalled_EmailTheStatement()
+        {
+            _statementGenerator
+                .Setup(sg => 
+                    sg.SaveStatement(_housekeeper.Oid, _housekeeper.FullName, (_statementDate)))
+                .Returns(_statementFileName);
+            
+            _service.SendStatementEmails(_statementDate);
+            
+            _emailSender.Verify(es => es.EmailFile(
+                _housekeeper.Email, 
+                _housekeeper.StatementEmailBody,
+                _statementFileName,
+                It.IsAny<string>()));
+        }
+        
+        [Test]
+        public void SendStatementEmails_StatementFileNameIsNull_ShouldNotEmailTheStatement()
+        {
+            _statementGenerator
+                .Setup(sg => 
+                    sg.SaveStatement(_housekeeper.Oid, _housekeeper.FullName, (_statementDate)))
+                .Returns(() => null);
+            
+            _service.SendStatementEmails(_statementDate);
+            
+            _emailSender.Verify(es => es.EmailFile(
+               It.IsAny<string>(),
+               It.IsAny<string>(),
+               It.IsAny<string>(),
+                It.IsAny<string>()),
+                Times.Never);
+        }
+        
+        [Test]
+        public void SendStatementEmails_StatementFileNameIsEmptyString_ShouldNotEmailTheStatement()
+        {
+            _statementGenerator
+                .Setup(sg => 
+                    sg.SaveStatement(_housekeeper.Oid, _housekeeper.FullName, (_statementDate)))
+                .Returns("");
+            
+            _service.SendStatementEmails(_statementDate);
+            
+            _emailSender.Verify(es => es.EmailFile(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>()),
+                Times.Never);
+        }
+        
+        [Test]
+        public void SendStatementEmails_StatementFileNameIsWhitespace_ShouldNotEmailTheStatement()
+        {
+            _statementGenerator
+                .Setup(sg => 
+                    sg.SaveStatement(_housekeeper.Oid, _housekeeper.FullName, (_statementDate)))
+                .Returns(" ");
+            
+            _service.SendStatementEmails(_statementDate);
+            
+            _emailSender.Verify(es => es.EmailFile(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>()),
+                Times.Never);
+        }
+        
         
     }
 }
